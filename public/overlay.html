@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chat Quest Board — Overlay</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="overlay-body">
+  <div id="board" class="overlay-board">
+    <h1>🎯 Quest Board</h1>
+    <div id="quest" class="quest-card">
+      <p class="quest-empty">No active quest — streamer, start one from the panel!</p>
+    </div>
+    <div id="leaderboard" class="leaderboard"></div>
+  </div>
+<script>
+async function refresh() {
+  try {
+    const res = await fetch('/api/state');
+    const state = await res.json();
+    const questEl = document.getElementById('quest');
+    const active = state.quests.find(q => q.status === 'active');
+    if (active) {
+      const pct = Math.min(100, Math.round(active.progress / active.goal * 100));
+      questEl.innerHTML =
+        '<h2>' + active.title + '</h2>' +
+        '<div class="bar"><div class="fill" style="width:' + pct + '%"></div></div>' +
+        '<p>' + active.progress + ' / ' + active.goal + ' — ' + active.participants.length + ' players — type !join</p>';
+    } else {
+      questEl.innerHTML = '<p class="quest-empty">No active quest — streamer, start one from the panel!</p>';
+    }
+    const top = Object.entries(state.leaderboard).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    document.getElementById('leaderboard').innerHTML = top.length
+      ? '<h3>🏆 Leaderboard</h3>' + top.map(([u, n], i) => '<p>' + (i + 1) + '. ' + u + ' — ' + n + '</p>').join('')
+      : '';
+  } catch (e) { /* server restarting — retry next poll */ }
+}
+refresh();
+setInterval(refresh, 1000);
+</script>
+</body>
+</html>

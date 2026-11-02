@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chat Quest Board — Streamer Panel</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="panel-body">
+  <h1>🎯 Chat Quest Board — Streamer Panel</h1>
+
+  <section>
+    <h2>Start a quest</h2>
+    <label>Quest type
+      <select id="questType">
+        <option value="chat-race">Chat Race (first N messages)</option>
+        <option value="newcomer-welcome">Welcome Wagon (first-time chatters)</option>
+        <option value="hype-meter">Hype Meter (emote count)</option>
+      </select>
+    </label>
+    <label>Goal <input id="questGoal" type="number" value="25" min="1"></label>
+    <button id="startBtn">Start quest</button>
+    <button id="completeBtn">Complete quest</button>
+    <button id="resetBtn">Reset board</button>
+  </section>
+
+  <section>
+    <h2>Local test (no Twitch needed)</h2>
+    <p class="note">Simulates a chat message locally so the overlay can be verified before a channel is connected. This is not Twitch chat.</p>
+    <input id="testUser" placeholder="username" value="testviewer">
+    <input id="testMsg" placeholder="message" value="hello!">
+    <input id="testEmotes" type="number" placeholder="emotes" value="0" min="0">
+    <button id="testBtn">Send test message</button>
+  </section>
+
+  <section>
+    <h2>Live state</h2>
+    <pre id="state"></pre>
+  </section>
+
+  <section>
+    <h2>Event log</h2>
+    <ul id="events"></ul>
+  </section>
+
+<script>
+async function api(path, body) {
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  return res.json();
+}
+document.getElementById('startBtn').onclick = async () => {
+  await api('/api/quests/start', {
+    type: document.getElementById('questType').value,
+    goal: Number(document.getElementById('questGoal').value)
+  });
+  refresh();
+};
+document.getElementById('completeBtn').onclick = async () => { await api('/api/quests/complete'); refresh(); };
+document.getElementById('resetBtn').onclick = async () => { await api('/api/quests/reset'); refresh(); };
+document.getElementById('testBtn').onclick = async () => {
+  await api('/api/test/chat', {
+    username: document.getElementById('testUser').value,
+    message: document.getElementById('testMsg').value,
+    emotes: Number(document.getElementById('testEmotes').value)
+  });
+  refresh();
+};
+async function refresh() {
+  try {
+    const state = await (await fetch('/api/state')).json();
+    document.getElementById('state').textContent = JSON.stringify(state, null, 2);
+    document.getElementById('events').innerHTML = state.events.map(e => '<li>' + e + '</li>').join('');
+  } catch (e) { /* retry next poll */ }
+}
+refresh();
+setInterval(refresh, 1000);
+</script>
+</body>
+</html>
